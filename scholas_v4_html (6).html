@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scholas Admin v4</title>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#004799;--success:#059669;--error:#DC2626;--bg:#F8FAFC;--card:#fff;--text:#1e293b}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);padding-bottom:90px}
+header{background:var(--primary);color:#fff;padding:1rem;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px #0002}
+.hrow{max-width:800px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+.day-btn{background:#ffffff33;border:1px solid #ffffff44;border-radius:12px;padding:10px 16px;color:#fff;font-weight:800;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.day-dropdown{position:absolute;right:1rem;top:4rem;background:var(--card);border-radius:16px;box-shadow:0 12px 40px #0004;z-index:200;min-width:200px;display:none}
+.day-dropdown.open{display:block}
+.day-opt{padding:14px 20px;border:none;background:none;cursor:pointer;font-weight:700;font-size:13px;width:100%;text-align:left;border-bottom:1px solid #f3f4f6}
+.day-opt:last-child{border-bottom:none}
+.day-opt.active{background:var(--primary);color:#fff}
+#toast{position:fixed;top:5rem;left:50%;transform:translateX(-50%);z-index:300;padding:16px 24px;border-radius:20px;font-weight:800;font-size:14px;color:#fff;box-shadow:0 8px 32px #0004;display:none;white-space:nowrap}
+main{max-width:800px;margin:0 auto;padding:1.5rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat{background:var(--card);padding:1.5rem;border-radius:20px;text-align:center;box-shadow:0 4px 16px #0001}
+.stat-num{font-size:2.5rem;font-weight:900;color:var(--primary)}
+
+/* Scan */
+#cam-wrap{position:relative;width:100%;max-width:420px;aspect-ratio:1;background:#1f2937;border-radius:36px;overflow:hidden;border:8px solid #fff;box-shadow:0 12px 48px #0004;margin:0 auto 1.5rem}
+video{width:100%;height:100%;object-fit:cover;display:block}
+.cam-idle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;background:#1f2937;color:#fff}
+.scan-line{position:absolute;left:0;right:0;height:3px;background:#60a5fa;box-shadow:0 0 16px #60a5fa;animation:scan 2s linear infinite}
+@keyframes scan{0%{top:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
+.btn-main{background:var(--primary);color:#fff;padding:1rem 2.5rem;border-radius:16px;font-weight:900;font-size:14px;border:none;cursor:pointer}
+.btn-stop-cam{position:absolute;top:12px;right:12px;background:#ef444499;border:none;border-radius:50%;width:44px;height:44px;color:#fff;font-size:18px;cursor:pointer;z-index:10}
+input[type=text]{width:100%;max-width:420px;padding:16px 20px;border-radius:16px;border:2px solid #e5e7eb;font-size:14px;font-weight:700;text-align:center;display:block;margin:0 auto}
+input:focus{outline:none;border-color:var(--primary)}
+
+/* Card */
+.card{background:var(--card);border-radius:24px;padding:1.5rem;box-shadow:0 4px 24px #0002;margin-bottom:1rem}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+.card-title{font-weight:900;font-size:17px}
+.btn-green{background:var(--success);color:#fff;padding:10px 20px;border-radius:12px;font-weight:900;border:none;cursor:pointer;font-size:13px}
+
+/* Tabla logs */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 8px;border-bottom:2px solid #f3f4f6;color:#6b7280;font-weight:700;text-transform:uppercase;font-size:10px;text-align:center}
+th:first-child{text-align:left}
+td{padding:12px 8px;border-bottom:1px solid #f9fafb;text-align:center}
+td:first-child{text-align:left}
+.dot{width:32px;height:32px;border-radius:50%;margin:0 auto;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center}
+.dot.y{background:var(--success);color:#fff}
+.dot.n{background:#f3f4f6;color:#9ca3af}
+
+/* Buses — lista por alumno */
+.bus-section{background:var(--card);border-radius:24px;padding:1.5rem;box-shadow:0 4px 24px #0002;margin-bottom:1.5rem;border-top:4px solid var(--primary)}
+.bus-section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.bus-section-title{font-weight:900;font-size:15px}
+.bus-count{font-size:12px;color:#6b7280;font-weight:600}
+.btn-mark-all{background:#1f2937;color:#fff;padding:8px 16px;border-radius:10px;font-weight:800;font-size:12px;border:none;cursor:pointer}
+.student-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6}
+.student-row:last-child{border-bottom:none}
+.student-info{display:flex;flex-direction:column}
+.student-name{font-weight:700;font-size:13px}
+.student-id{font-size:11px;color:#9ca3af}
+.att-toggle{display:flex;gap:8px}
+.att-btn{padding:6px 14px;border-radius:8px;font-weight:800;font-size:12px;border:none;cursor:pointer;transition:all .15s}
+.att-btn.presente{background:var(--success);color:#fff}
+.att-btn.ausente{background:#fee2e2;color:var(--error)}
+.att-btn.inactive{background:#f3f4f6;color:#9ca3af}
+
+/* Settings */
+.settings-box{background:var(--card);border-radius:28px;padding:2rem;box-shadow:0 8px 32px #0002;max-width:600px;margin:0 auto}
+textarea{width:100%;height:180px;border:2px dashed #d1d5db;border-radius:16px;padding:1rem;font-family:monospace;font-size:13px;resize:vertical}
+.btn-import{width:100%;background:var(--primary);color:#fff;padding:1rem;border-radius:16px;font-weight:900;font-size:14px;border:none;cursor:pointer;margin-top:.75rem}
+.btn-sync{width:100%;background:var(--success);color:#fff;padding:1rem;border-radius:16px;font-weight:900;font-size:14px;border:none;cursor:pointer;margin-top:.75rem}
+.btn-danger{width:100%;background:transparent;color:#ef4444;padding:.875rem;font-weight:900;border:2px solid #ef4444;border-radius:14px;cursor:pointer;margin-top:.75rem}
+
+/* Modal QR */
+.overlay{position:fixed;inset:0;background:#0008;z-index:400;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal{background:var(--card);border-radius:32px;padding:2.5rem;max-width:380px;width:100%;text-align:center;position:relative}
+.modal-close{position:absolute;top:1rem;right:1rem;background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer}
+.modal-name{font-weight:900;font-size:18px;margin-bottom:.25rem}
+.modal-sub{font-size:12px;color:#6b7280;margin-bottom:1.5rem}
+#qr-container{width:200px;height:200px;margin:0 auto 1.5rem}
+#qr-container canvas,#qr-container img{width:200px!important;height:200px!important}
+.btn-blue{width:100%;background:var(--primary);color:#fff;padding:13px;border-radius:14px;font-weight:900;font-size:13px;border:none;cursor:pointer;margin-bottom:.5rem}
+.btn-gray{width:100%;background:#f1f5f9;color:#64748b;padding:11px;border-radius:14px;font-weight:900;font-size:12px;border:none;cursor:pointer}
+
+/* Nav */
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;border-top:1px solid #e5e7eb;box-shadow:0 -4px 20px #0002;z-index:100}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:.375rem;background:none;border:none;cursor:pointer;color:#6b7280;padding:.75rem .5rem;font-size:11px;font-weight:700}
+.nav-btn.active{color:var(--primary)}
+.nav-icon{font-size:22px;line-height:1}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div>
+      <div style="font-weight:900;font-size:15px">Scholas Admin v4</div>
+      <div id="sync-status" style="font-size:11px;opacity:.8">● Conectando...</div>
+    </div>
+    <button class="day-btn" onclick="toggleDayMenu()">
+      📅 <span id="current-day">Lunes</span> ▾
+    </button>
+  </div>
+  <div class="day-dropdown" id="day-menu"></div>
+</header>
+
+<div id="toast"></div>
+
+<main>
+  <!-- Stats -->
+  <div class="stats" id="stats-bar" style="display:none">
+    <div class="stat"><div class="stat-num" id="total-s">0</div><div style="font-size:12px;color:#6b7280">Total</div></div>
+    <div class="stat"><div class="stat-num" id="today-s">0</div><div style="font-size:12px;color:#6b7280">Hoy</div></div>
+    <div class="stat"><div class="stat-num" id="pct-s">0%</div><div style="font-size:12px;color:#6b7280">Promedio</div></div>
+  </div>
+
+  <!-- SCAN -->
+  <div id="scan-view">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:1rem">
+      <div id="cam-wrap">
+        <div class="cam-idle" id="cam-idle">
+          <div style="font-size:4rem;opacity:.5">📷</div>
+          <button class="btn-main" onclick="startScan()">Iniciar Escáner QR</button>
+          <div style="color:#9ca3af;font-size:12px">O busca abajo</div>
+        </div>
+        <video id="video" playsinline muted style="display:none"></video>
+        <canvas id="canvas" style="display:none"></canvas>
+        <div class="scan-line hidden" id="scan-line"></div>
+        <button class="btn-stop-cam hidden" id="stop-scan" onclick="stopScan()">✕</button>
+      </div>
+      <input type="text" id="manual-search" placeholder="ID o nombre del alumno + Enter" onkeydown="onManualSearch(event)"/>
+    </div>
+  </div>
+
+  <!-- BUSES -->
+  <div id="buses-view" class="hidden">
+    <div id="buses-content"></div>
+  </div>
+
+  <!-- LOGS -->
+  <div id="logs-view" class="hidden">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">📊 Registro Semanal</span>
+        <button class="btn-green" onclick="exportCSV()">📥 CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr><th>Alumno</th><th>L</th><th>M</th><th>X</th><th>J</th><th>V</th><th>QR</th></tr>
+          </thead>
+          <tbody id="logs-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="admin-view" class="hidden">
+    <div class="settings-box">
+      <h2 style="font-weight:900;font-size:18px;margin-bottom:1.5rem">⚙️ Administración</h2>
+      <label style="font-weight:700;font-size:13px;display:block;margin-bottom:.5rem">Importar alumnos (una por línea):</label>
+      <small style="color:#6b7280;display:block;margin-bottom:.5rem">Formato: ID, Nombres, Apellidos, Escuela</small>
+      <textarea id="bulk-students" placeholder="001,Juan,Pérez García,Normal Superior&#10;002,María,López Díaz,INEM Simón Bolívar"></textarea>
+      <button class="btn-import" onclick="bulkImport()">🚀 Importar Alumnos</button>
+      <button class="btn-sync" onclick="syncNow()">🔄 Sincronizar Ahora</button>
+      <button class="btn-danger" onclick="clearAllData()">🗑️ Borrar Todo</button>
+    </div>
+  </div>
+</main>
+
+<!-- Modal QR -->
+<div class="overlay hidden" id="qr-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-name" id="modal-name"></div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div id="qr-container"></div>
+    <button class="btn-blue" onclick="downloadCredential()">🎫 Descargar Credencial</button>
+    <button class="btn-gray" onclick="downloadQR()">📱 Solo QR</button>
+  </div>
+</div>
+
+<nav>
+  <button class="nav-btn active" id="nav-scan" onclick="showView('scan')">
+    <span class="nav-icon">📷</span>ESCANEAR
+  </button>
+  <button class="nav-btn" id="nav-buses" onclick="showView('buses')">
+    <span class="nav-icon">🚌</span>BUSES
+  </button>
+  <button class="nav-btn" id="nav-logs" onclick="showView('logs')">
+    <span class="nav-icon">📊</span>LISTAS
+  </button>
+  <button class="nav-btn" id="nav-admin" onclick="showView('admin')">
+    <span class="nav-icon">⚙️</span>ADMIN
+  </button>
+</nav>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const API = 'https://script.google.com/macros/s/AKfycbyMwXzm8POwWHGpnqyGvKRrZx-nGK70oaNbEG7AuDwgJkjGTOq5e1Cj1TMyV_OouqE/exec';
+const DAYS_LABEL = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DAYS_SHORT = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+let currentDay   = new Date().getDay() === 0 || new Date().getDay() === 6 ? 1 : new Date().getDay();
+let students     = [];
+let attendance   = [];   // todos los registros de la semana
+let scanning     = false;
+let currentView  = 'scan';
+let currentStudent = null;
+
+// ── API via fetch (archivo .html local → Apps Script) ─────────────────────────
+function api(action, params) {
+  params = params || {};
+  params.action = action;
+  var qs = Object.keys(params).map(function(k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+  }).join('&');
+  return fetch(API + '?' + qs, { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.ok) return d.data;
+      throw new Error((d && (d.error || d.msg)) || 'Error');
+    });
+}
+
+// ── Carga de datos ────────────────────────────────────────────────────────────
+async function loadData() {
+  setStatus('● Cargando...');
+  try {
+    // Carga alumnos y asistencia de toda la semana (días 1-5)
+    [students, attendance] = await Promise.all([
+      api('getStudents'),
+      api('getAttendance')   // sin filtro de día → todos los registros
+    ]);
+    setStatus('● Listo — ' + students.length + ' alumnos');
+    updateStats();
+    renderCurrentView();
+    document.getElementById('stats-bar').style.display = students.length ? 'grid' : 'none';
+  } catch(e) {
+    setStatus('● Sin conexión');
+  }
+}
+
+function setStatus(txt) { document.getElementById('sync-status').textContent = txt; }
+
+function updateStats() {
+  const today = attendance.filter(a => a.dayIndex == currentDay).length;
+  const pct   = students.length ? Math.round((today / students.length) * 100) : 0;
+  document.getElementById('total-s').textContent = students.length;
+  document.getElementById('today-s').textContent = today;
+  document.getElementById('pct-s').textContent   = pct + '%';
+}
+
+// ── Day menu ──────────────────────────────────────────────────────────────────
+function buildDayMenu() {
+  const menu = document.getElementById('day-menu');
+  menu.innerHTML = [1,2,3,4,5].map(d =>
+    `<button class="day-opt${d===currentDay?' active':''}" onclick="selectDay(${d})">${DAYS_LABEL[d]}</button>`
+  ).join('');
+}
+function toggleDayMenu() {
+  const m = document.getElementById('day-menu');
+  m.classList.toggle('open');
+  buildDayMenu();
+}
+function selectDay(d) {
+  currentDay = d;
+  document.getElementById('current-day').textContent = DAYS_LABEL[d];
+  document.getElementById('day-menu').classList.remove('open');
+  updateStats();
+  renderCurrentView();
+}
+document.getElementById('current-day').textContent = DAYS_LABEL[currentDay];
+document.addEventListener('click', e => {
+  if (!e.target.closest('.day-btn') && !e.target.closest('.day-dropdown'))
+    document.getElementById('day-menu').classList.remove('open');
+});
+
+// ── Views ─────────────────────────────────────────────────────────────────────
+function showView(v) {
+  stopScan();
+  currentView = v;
+  ['scan','buses','logs','admin'].forEach(id => {
+    document.getElementById(id + '-view').classList.toggle('hidden', id !== v);
+    document.getElementById('nav-' + id).classList.toggle('active', id === v);
+  });
+  renderCurrentView();
+}
+function renderCurrentView() {
+  if (currentView === 'logs')  renderLogs();
+  if (currentView === 'buses') renderBuses();
+}
+
+// ── Cámara / Escáner ──────────────────────────────────────────────────────────
+async function startScan() {
+  scanning = true;
+  try {
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}}); }
+    catch { stream = await navigator.mediaDevices.getUserMedia({video:true}); }
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    await video.play();
+    document.getElementById('cam-idle').style.display = 'none';
+    video.style.display = 'block';
+    document.getElementById('scan-line').classList.remove('hidden');
+    document.getElementById('stop-scan').classList.remove('hidden');
+    scanLoop();
+  } catch { scanning = false; showToast('error','Cámara no disponible. Revisa permisos.'); }
+}
+function stopScan() {
+  scanning = false;
+  const video = document.getElementById('video');
+  if (video.srcObject) { video.srcObject.getTracks().forEach(t=>t.stop()); video.srcObject = null; }
+  video.style.display = 'none';
+  document.getElementById('cam-idle').style.display = 'flex';
+  document.getElementById('scan-line').classList.add('hidden');
+  document.getElementById('stop-scan').classList.add('hidden');
+}
+function scanLoop() {
+  if (!scanning) return;
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  if (video.readyState === 4) {
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d', {willReadFrequently:true});
+    ctx.drawImage(video, 0, 0);
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(img.data, img.width, img.height, {inversionAttempts:'dontInvert'});
+    if (code) {
+      const s = students.find(st => st.id === code.data.trim());
+      if (s) { markAttendance(s); setTimeout(scanLoop, 2000); return; }
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+// ── Asistencia ────────────────────────────────────────────────────────────────
+function isPresent(studentId, day) {
+  return attendance.some(a => a.studentId === studentId && Number(a.dayIndex) === day);
+}
+
+async function markAttendance(student) {
+  if (isPresent(student.id, currentDay)) {
+    showToast('info', student.nombres + ' ya asistió hoy'); return;
+  }
+  attendance.push({ studentId: student.id, nombres: student.nombres, apellidos: student.apellidos, escuela: student.escuela, dayIndex: currentDay });
+  showToast('success', '✅ ' + student.nombres + ' registrado');
+  if (navigator.vibrate) navigator.vibrate(100);
+  updateStats();
+  renderCurrentView();
+  try {
+    await api('markAttendance', { studentId: student.id, dayIndex: currentDay, nombres: student.nombres, apellidos: student.apellidos, escuela: student.escuela });
+  } catch(e) { showToast('error','Error guardando: '+e.message); }
+}
+
+async function removeAttendance(studentId) {
+  attendance = attendance.filter(a => !(a.studentId === studentId && Number(a.dayIndex) === currentDay));
+  updateStats();
+  renderCurrentView();
+  // Nota: el backend no tiene endpoint de borrar individual — se actualiza localmente
+  // Si necesitas borrado en Sheet, avisa para agregar ese endpoint
+}
+
+function onManualSearch(e) {
+  if (e.key !== 'Enter') return;
+  const q = e.target.value.trim().toLowerCase();
+  e.target.value = '';
+  if (!q) return;
+  const s = students.find(st => st.id.toLowerCase() === q || (st.nombres+' '+st.apellidos).toLowerCase().includes(q));
+  if (s) markAttendance(s);
+  else showToast('error','Alumno no encontrado');
+}
+
+// ── Render Buses (lista individual con 1/0) ───────────────────────────────────
+function renderBuses() {
+  const schools = [...new Set(students.map(s => s.escuela))];
+  const cont = document.getElementById('buses-content');
+  if (!schools.length) { cont.innerHTML='<p style="color:#9ca3af;text-align:center;padding:2rem">No hay escuelas cargadas.</p>'; return; }
+
+  cont.innerHTML = schools.map(school => {
+    const group = students.filter(s => s.escuela === school);
+    const present = group.filter(s => isPresent(s.id, currentDay)).length;
+    const rows = group.map(s => {
+      const here = isPresent(s.id, currentDay);
+      return `<div class="student-row" id="row-${s.id}">
+        <div class="student-info">
+          <span class="student-name">${s.nombres} ${s.apellidos}</span>
+          <span class="student-id">ID: ${s.id}</span>
+        </div>
+        <div class="att-toggle">
+          <button class="att-btn ${here?'presente':'inactive'}" onclick="setBusAtt('${s.id}',1)">✓ 1</button>
+          <button class="att-btn ${!here?'ausente':'inactive'}" onclick="setBusAtt('${s.id}',0)">✗ 0</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="bus-section">
+      <div class="bus-section-head">
+        <span class="bus-section-title">🚌 ${school}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="bus-count">${present}/${group.length}</span>
+          <button class="btn-mark-all" onclick="markAllBus('${school.replace(/'/g,"\\'")}')">✓ Todos</button>
+        </div>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+async function markAllBus(school) {
+  const group = students.filter(s => s.escuela === school && !isPresent(s.id, currentDay));
+  if (!group.length) { showToast('info', 'Todos ya marcados'); return; }
+  showToast('info', 'Marcando ' + group.length + ' alumnos...');
+  for (const s of group) {
+    attendance.push({ studentId: s.id, nombres: s.nombres, apellidos: s.apellidos, escuela: s.escuela, dayIndex: currentDay });
+    try { await api('markAttendance', { studentId: s.id, dayIndex: currentDay, nombres: s.nombres, apellidos: s.apellidos, escuela: s.escuela }); } catch {}
+  }
+  updateStats();
+  renderBuses();
+  showToast('success', group.length + ' alumnos de ' + school + ' marcados');
+}
+
+async function setBusAtt(studentId, value) {
+  const s = students.find(st => st.id === studentId);
+  if (!s) return;
+  if (value === 1) {
+    await markAttendance(s);
+  } else {
+    await removeAttendance(studentId);
+  }
+  // Re-render solo la sección para no perder scroll
+  renderBuses();
+}
+
+// ── Render Logs ───────────────────────────────────────────────────────────────
+function renderLogs() {
+  const tbody = document.getElementById('logs-body');
+  if (!students.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#9ca3af">No hay alumnos cargados.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = students.map(s => {
+    const days = [1,2,3,4,5].map(d => {
+      const ok = isPresent(s.id, d);
+      return `<td><div class="dot ${ok?'y':'n'}">${ok?'1':'0'}</div></td>`;
+    }).join('');
+    return `<tr>
+      <td><span style="font-weight:700">${s.nombres} ${s.apellidos}</span><br><small style="color:#9ca3af">${s.escuela}</small></td>
+      ${days}
+      <td><button onclick="openModal('${s.id}')" style="background:none;border:none;font-size:20px;cursor:pointer">🔲</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Modal QR + Descarga ───────────────────────────────────────────────────────
+function openModal(id) {
+  const s = students.find(st => st.id === id);
+  if (!s) return;
+  currentStudent = s;
+  document.getElementById('modal-name').textContent = s.nombres + ' ' + s.apellidos;
+  document.getElementById('modal-sub').textContent  = s.escuela + ' · ID: ' + s.id;
+  const cont = document.getElementById('qr-container');
+  cont.innerHTML = '';
+  new QRCode(cont, { text: s.id, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
+  document.getElementById('qr-modal').classList.remove('hidden');
+}
+function closeModal() {
+  document.getElementById('qr-modal').classList.add('hidden');
+  currentStudent = null;
+}
+
+function getQrCanvas() {
+  return document.getElementById('qr-container').querySelector('canvas');
+}
+
+function downloadQR() {
+  if (!currentStudent) return;
+  const qr = getQrCanvas(); if (!qr) return;
+  const a = document.createElement('a');
+  a.download = 'QR_' + currentStudent.apellidos.replace(/\s/g,'_') + '.png';
+  a.href = qr.toDataURL('image/png');
+  a.click();
+}
+
+function downloadCredential() {
+  if (!currentStudent) return;
+  const qr = getQrCanvas(); if (!qr) { showToast('error','QR no listo'); return; }
+  const canvas = document.createElement('canvas');
+  canvas.width = 1000; canvas.height = 1400;
+  const ctx = canvas.getContext('2d');
+  // Fondo
+  ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0,0,1000,1400);
+  // Header
+  ctx.fillStyle = '#004799'; ctx.fillRect(0,0,1000,310);
+  ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center';
+  ctx.font = 'bold 54px Arial';
+  ctx.fillText(currentStudent.nombres.toUpperCase(), 500, 140);
+  ctx.fillText(currentStudent.apellidos.toUpperCase(), 500, 210);
+  ctx.font = '34px Arial';
+  ctx.fillText(currentStudent.escuela.toUpperCase(), 500, 275);
+  // QR
+  ctx.drawImage(qr, 150, 360, 700, 700);
+  // ID
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 34px monospace';
+  ctx.fillText('ID: ' + currentStudent.id, 500, 1210);
+  // Footer
+  ctx.fillStyle = '#004799'; ctx.fillRect(0,1330,1000,70);
+  const a = document.createElement('a');
+  a.download = 'CREDENCIAL_' + currentStudent.apellidos.replace(/\s/g,'_') + '.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+// ── Import / Export ───────────────────────────────────────────────────────────
+async function bulkImport() {
+  const raw = document.getElementById('bulk-students').value.trim();
+  if (!raw) { showToast('info','Pega datos primero'); return; }
+  const list = [];
+  raw.split('\n').forEach(row => {
+    const p = row.split(/[,;\t]/).map(s=>s.trim());
+    if (p.length >= 4) list.push({ id:p[0], nombres:p[1], apellidos:p[2], escuela:p[3] });
+  });
+  if (!list.length) { showToast('error','Formato: ID,Nombres,Apellidos,Escuela'); return; }
+  showToast('info','Importando '+list.length+' alumnos...');
+  try {
+    const res = await api('bulkAddStudents', { students: JSON.stringify(list) });
+    document.getElementById('bulk-students').value = '';
+    showToast('success', res.added + ' importados, ' + res.skipped + ' duplicados');
+    await loadData();
+  } catch(e) { showToast('error','Error: '+e.message); }
+}
+
+async function syncNow() { await loadData(); showToast('success','Sincronizado ✓'); }
+
+async function clearAllData() {
+  if (!confirm('¿Borrar TODO? Esta acción no se puede deshacer.')) return;
+  try {
+    await api('clearAll', { confirm:'YES' });
+    students=[]; attendance=[];
+    renderCurrentView(); updateStats();
+    showToast('success','Datos eliminados');
+  } catch(e) { showToast('error',e.message); }
+}
+
+function exportCSV() {
+  const headers = 'ID,Nombres,Apellidos,Escuela,Lunes,Martes,Miercoles,Jueves,Viernes';
+  const rows = students.map(s => {
+    const cols = [s.id, s.nombres, s.apellidos, s.escuela];
+    for (let d=1; d<=5; d++) cols.push(isPresent(s.id,d)?1:0);
+    return cols.join(',');
+  });
+  const csv = '\uFEFF' + [headers,...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'asistencia_' + DAYS_LABEL[currentDay].toLowerCase() + '_' + new Date().toLocaleDateString('es-CO').replace(/\//g,'-') + '.csv';
+  a.click();
+  showToast('success','CSV generado');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(type,msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='success'?'#10b981':type==='error'?'#ef4444':'#3b82f6';
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.style.display='none',3000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadData();
+setInterval(loadData, 30000);
+</script>
+</body>
+</html>
